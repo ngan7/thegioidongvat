@@ -3,92 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xem Video 360 độ VR</title>
-    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <title>Trình phát Video 360 VR</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r105/three.min.js"></script>
+    <script src="https://pellepim.github.io/three-js-mods/js/panolens.min.js"></script>
+
     <style>
-        /* Giao diện nút bấm kích hoạt cảm biến và âm thanh */
-        #splash-screen {
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background-color: #000;
+        }
+        /* Màn hình chờ bắt buộc kích hoạt cảm biến & âm thanh */
+        #welcome-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
             z-index: 9999;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             color: white;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
         }
-        .play-btn {
-            padding: 15px 30px;
+        .btn-play {
+            padding: 15px 40px;
             font-size: 18px;
-            background-color: #ff4081;
-            color: white;
+            font-weight: bold;
+            background-color: #00e676;
+            color: #000;
             border: none;
-            border-radius: 25px;
+            border-radius: 30px;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 15px rgba(0,230,118,0.4);
+            transition: 0.3s;
             margin-top: 20px;
+        }
+        .btn-play:active {
+            transform: scale(0.95);
+        }
+        #container {
+            width: 100%; height: 100%;
         }
     </style>
 </head>
 <body>
 
-    <div id="splash-screen">
-        <h2>Trải nghiệm Video 360° VR</h2>
-        <p>Vui lòng nhấn nút dưới đây để cấp quyền cảm biến xoay và phát video.</p>
-        <button class="play-btn" id="start-btn">BẮT ĐẦU XEM</button>
+    <div id="welcome-screen">
+        <h2>TRẢI NGHIỆM VIDEO 360°</h2>
+        <p>Bấm nút bên dưới để cấp quyền xoay màn hình và phát video</p>
+        <button class="btn-play" id="start-btn">XEM NGAY</button>
     </div>
 
-    <a-scene loading-screen="enabled: false">
-        
-        <a-assets>
-            <video id="video360" 
-                   src="assets/dongvat.mp4" 
-                   autoplay 
-                   loop 
-                   crossorigin="anonymous" 
-                   playsinline 
-                   webkit-playsinline>
-            </video>
-        </a-assets>
-
-        <a-videosphere src="#video360" rotation="0 -90 0"></a-videosphere>
-
-        <a-camera look-controls="magicWindowTrackingEnabled: true; touchEnabled: true; reverseTouchDrag: false;">
-        </a-camera>
-
-    </a-scene>
+    <div id="container"></div>
 
     <script>
         const startBtn = document.getElementById('start-btn');
-        const splashScreen = document.getElementById('splash-screen');
-        const video = document.getElementById('video360');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const container = document.getElementById('container');
 
-        // Hàm kích hoạt sau khi user bấm nút
+        // ĐƯỜNG LINK VIDEO 360 CỦA BẠN (Thay đổi tại đây nếu muốn)
+        const videoUrl = 'https://stemkoski.github.io/Three.js/videos/Backyard.mp4';
+
         startBtn.addEventListener('click', function () {
-            // 1. Ẩn màn hình chờ
-            splashScreen.style.display = 'none';
+            // 1. Ẩn màn hình chờ đi
+            welcomeScreen.style.display = 'none';
 
-            // 2. Phát video (vượt qua cơ chế chặn autoplay của trình duyệt)
-            video.play().catch(err => {
-                console.log("Video không thể tự phát:", err);
-            });
-
-            // 3. Yêu cầu quyền truy cập Cảm biến (Đặc biệt quan trọng cho iOS từ 13+)
+            // 2. Yêu cầu quyền cảm biến chuyển động (Bắt buộc cho iPhone/iOS)
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
                     .then(permissionState => {
-                        if (permissionState === 'granted') {
-                            console.log("Đã cấp quyền cảm biến thành công!");
-                        } else {
-                            alert("Bạn cần cấp quyền cảm biến để xoay được góc nhìn bằng điện thoại.");
-                        }
+                        khởi_tạo_video_360();
                     })
-                    .catch(console.error);
+                    .catch(err => {
+                        console.error(err);
+                        khởi_tạo_video_360(); // Vẫn chạy nếu là Android không cần xin quyền
+                    });
+            } else {
+                // Đối với Android hoặc máy tính thông thường
+                khởi_tạo_video_360();
             }
         });
+
+        function khởi_tạo_video_360() {
+            // Tạo trình xem Panolens
+            const viewer = new PANOLENS.Viewer({ 
+                container: container,
+                controlBar: true, // Hiện thanh điều khiển tua/phóng to
+                autoHideControlBar: true
+            });
+
+            // Tạo đối tượng Video 360 độ
+            const videoPanorama = new PANOLENS.VideoPanorama(videoUrl, { 
+                autoplay: true, 
+                muted: false,
+                loop: true,
+                playsinline: true,
+                crossOrigin: 'anonymous'
+            });
+
+            // Thêm vào trình xem và kích hoạt cảm biến di động
+            viewer.add(videoPanorama);
+            
+            // Lệnh kích hoạt cảm biến con quay hồi chuyển trên điện thoại
+            viewer.enableControl(PANOLENS.Controls.DEVICEORIENTATION); 
+        }
     </script>
 </body>
 </html>
