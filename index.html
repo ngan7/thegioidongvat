@@ -3,116 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trình phát Video 360 VR</title>
+    <title>Trải nghiệm WebVR 360 độ</title>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r105/three.min.js"></script>
-    <script src="https://pellepim.github.io/three-js-mods/js/panolens.min.js"></script>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
     <style>
-        body, html {
-            margin: 0; padding: 0;
-            width: 100%; height: 100%;
-            overflow: hidden;
-            background-color: #000;
-        }
-        /* Màn hình chờ bắt buộc kích hoạt cảm biến & âm thanh */
-        #welcome-screen {
+        /* Giao diện màn hình chờ để xin quyền cảm biến và kích hoạt video */
+        #vr-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            z-index: 9999;
+            background: rgba(15, 23, 42, 0.95);
+            z-index: 99999;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #ffffff;
+            font-family: system-ui, -apple-system, sans-serif;
             text-align: center;
             padding: 20px;
-            box-sizing: border-box;
         }
-        .btn-play {
-            padding: 15px 40px;
-            font-size: 18px;
+        .vr-title {
+            font-size: 24px;
             font-weight: bold;
-            background-color: #00e676;
-            color: #000;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        .vr-desc {
+            font-size: 14px;
+            color: #94a3b8;
+            max-width: 300px;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        .vr-btn {
+            padding: 14px 35px;
+            font-size: 16px;
+            font-weight: 600;
+            background-color: #3b82f6;
+            color: white;
             border: none;
-            border-radius: 30px;
+            border-radius: 50px;
             cursor: pointer;
-            box-shadow: 0 5px 15px rgba(0,230,118,0.4);
-            transition: 0.3s;
-            margin-top: 20px;
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+            transition: all 0.2s;
         }
-        .btn-play:active {
+        .vr-btn:active {
             transform: scale(0.95);
-        }
-        #container {
-            width: 100%; height: 100%;
+            background-color: #2563eb;
         }
     </style>
 </head>
 <body>
 
-    <div id="welcome-screen">
-        <h2>TRẢI NGHIỆM VIDEO 360°</h2>
-        <p>Bấm nút bên dưới để cấp quyền xoay màn hình và phát video</p>
-        <button class="btn-play" id="start-btn">XEM NGAY</button>
+    <div id="vr-overlay">
+        <div class="vr-title">WEBVR 360° PLAYER</div>
+        <div class="vr-desc">Vui lòng bấm nút bên dưới để kích hoạt cảm biến con quay hồi chuyển và phát video.</div>
+        <button class="vr-btn" id="enter-vr-btn">BẮT ĐẦU TRẢI NGHIỆM</button>
     </div>
 
-    <div id="container"></div>
+    <a-scene loading-screen="enabled: false" vr-mode-ui="enabled: true">
+        
+        <a-assets>
+            <video id="video360" 
+                   src="https://vazxmixjsiawhamofees.supabase.co/storage/v1/object/public/models/cool-park/video.mp4" 
+                   autoplay 
+                   loop 
+                   muted="false"
+                   crossorigin="anonymous" 
+                   playsinline 
+                   webkit-playsinline>
+            </video>
+        </a-assets>
+
+        <a-videosphere src="#video360" rotation="0 -90 0"></a-videosphere>
+
+        <a-camera look-controls="magicWindowTrackingEnabled: true; touchEnabled: true; reverseTouchDrag: false;">
+        </a-camera>
+
+    </a-scene>
 
     <script>
-        const startBtn = document.getElementById('start-btn');
-        const welcomeScreen = document.getElementById('welcome-screen');
-        const container = document.getElementById('container');
+        const enterBtn = document.getElementById('enter-vr-btn');
+        const overlay = document.getElementById('vr-overlay');
+        const myVideo = document.getElementById('video360');
 
-        // ĐƯỜNG LINK VIDEO 360 CỦA BẠN (Thay đổi tại đây nếu muốn)
-        const videoUrl = 'assets/dongvat.mp4';
+        enterBtn.addEventListener('click', function () {
+            // 1. Ẩn màn hình chờ đi để hiển thị không gian VR
+            overlay.style.display = 'none';
 
-        startBtn.addEventListener('click', function () {
-            // 1. Ẩn màn hình chờ đi
-            welcomeScreen.style.display = 'none';
+            // 2. Phát video gốc (Lệnh này giúp vượt qua cơ chế chặn âm thanh của trình duyệt di động)
+            myVideo.play().catch(function(error) {
+                console.log("Trình duyệt chặn tự động phát, đang thử lại...", error);
+            });
 
-            // 2. Yêu cầu quyền cảm biến chuyển động (Bắt buộc cho iPhone/iOS)
+            // 3. Xin quyền cảm biến Gyroscope chuyển động (Cực kỳ quan trọng đối với iPhone)
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
                     .then(permissionState => {
-                        khởi_tạo_video_360();
+                        if (permissionState === 'granted') {
+                            console.log("Đã được cấp quyền cảm biến!");
+                        } else {
+                            alert("Bạn đã từ chối quyền cảm biến. Hãy tải lại trang và cho phép để có thể xoay được góc nhìn nhé!");
+                        }
                     })
-                    .catch(err => {
-                        console.error(err);
-                        khởi_tạo_video_360(); // Vẫn chạy nếu là Android không cần xin quyền
-                    });
-            } else {
-                // Đối với Android hoặc máy tính thông thường
-                khởi_tạo_video_360();
+                    .catch(console.error);
             }
         });
-
-        function khởi_tạo_video_360() {
-            // Tạo trình xem Panolens
-            const viewer = new PANOLENS.Viewer({ 
-                container: container,
-                controlBar: true, // Hiện thanh điều khiển tua/phóng to
-                autoHideControlBar: true
-            });
-
-            // Tạo đối tượng Video 360 độ
-            const videoPanorama = new PANOLENS.VideoPanorama(videoUrl, { 
-                autoplay: true, 
-                muted: false,
-                loop: true,
-                playsinline: true,
-                crossOrigin: 'anonymous'
-            });
-
-            // Thêm vào trình xem và kích hoạt cảm biến di động
-            viewer.add(videoPanorama);
-            
-            // Lệnh kích hoạt cảm biến con quay hồi chuyển trên điện thoại
-            viewer.enableControl(PANOLENS.Controls.DEVICEORIENTATION); 
-        }
     </script>
 </body>
 </html>
